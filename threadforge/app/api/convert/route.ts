@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+\import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { generateNewsletter } from "@/lib/openai";
 import { fetchThreadFromUrl, parseManualThreadInput } from "@/lib/thread-scraper";
@@ -14,7 +14,8 @@ const ConvertSchema = z.object({
   includeAffiliates: z.boolean().default(true)
 });
 
-type TweetLike = { text: string; [key: string]: unknown };
+// ✅ Only require what we actually need
+type TweetLike = { text: string };
 
 export async function POST(request: NextRequest): Promise<NextResponse<ConversionResponse>> {
   try {
@@ -33,6 +34,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<Conversio
       data: { user }
     } = await supabase.auth.getUser();
 
+    // Check credits for authenticated users
     if (user) {
       const { data: profile } = await supabase
         .from("users")
@@ -48,17 +50,21 @@ export async function POST(request: NextRequest): Promise<NextResponse<Conversio
       }
     }
 
+    // Extract tweets from URL or manual input
     let tweets: TweetLike[] = [];
 
     if (manualContent) {
-      tweets = parseManualThreadInput(manualContent) as TweetLike[];
+      tweets = parseManualThreadInput(manualContent);
     } else if (threadUrl) {
-      const rawContent = (await fetchThreadFromUrl(threadUrl)) as TweetLike[];
-      tweets = rawContent;
+      tweets = await fetchThreadFromUrl(threadUrl);
     } else {
-      return NextResponse.json({ success: false, error: "No content provided" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "No content provided" },
+        { status: 400 }
+      );
     }
 
+    // Get user's affiliates if authenticated and requested
     let affiliates: Affiliate[] = [];
     if (user && includeAffiliates) {
       const { data } = await supabase
@@ -70,8 +76,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<Conversio
       affiliates = (data as Affiliate[]) || [];
     }
 
+    // Generate newsletter with OpenAI
     const newsletter = await generateNewsletter(tweets, affiliates, style);
 
+    // Save thread and deduct credit for authenticated users
     if (user) {
       const threadId = threadUrl?.match(/status\/(\d+)/)?.[1] || `manual_${Date.now()}`;
 
