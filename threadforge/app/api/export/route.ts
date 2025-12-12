@@ -2,24 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
+export const runtime = "nodejs";
+
 const ExportSchema = z.object({
   threadId: z.string().uuid(),
-  platform: z.enum(["beehiiv", "substack"]),
+  platform: z.enum(["beehiiv", "substack"])
 });
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body: unknown = await request.json();
     const { threadId, platform } = ExportSchema.parse(body);
 
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user has paid plan
     const { data: profile } = await supabase
       .from("users")
       .select("plan")
@@ -33,7 +36,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the thread
     const { data: thread } = await supabase
       .from("threads")
       .select("*")
@@ -45,10 +47,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Thread not found" }, { status: 404 });
     }
 
-    // Get webhook URL based on platform
-    const webhookUrl = platform === "beehiiv"
-      ? process.env.ZAPIER_BEEHIIV_WEBHOOK_URL
-      : process.env.ZAPIER_SUBSTACK_WEBHOOK_URL;
+    const webhookUrl =
+      platform === "beehiiv"
+        ? process.env.ZAPIER_BEEHIIV_WEBHOOK_URL
+        : process.env.ZAPIER_SUBSTACK_WEBHOOK_URL;
 
     if (!webhookUrl) {
       return NextResponse.json(
@@ -57,7 +59,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send to Zapier webhook
     const webhookResponse = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -65,23 +66,19 @@ export async function POST(request: NextRequest) {
         title: thread.title,
         content: thread.newsletter_content,
         author_email: user.email,
-        created_at: new Date().toISOString(),
-      }),
+        created_at: new Date().toISOString()
+      })
     });
 
     if (!webhookResponse.ok) {
       throw new Error(`Webhook failed: ${webhookResponse.status}`);
     }
 
-    // Update thread export status
-    await supabase
-      .from("threads")
-      .update({ exported_to: platform })
-      .eq("id", threadId);
+    await supabase.from("threads").update({ exported_to: platform }).eq("id", threadId);
 
     return NextResponse.json({
       success: true,
-      message: `Newsletter sent to ${platform} via Zapier`,
+      message: `Newsletter sent to ${platform} via Zapier`
     });
   } catch (error) {
     console.error("Export error:", error);
