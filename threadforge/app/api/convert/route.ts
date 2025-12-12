@@ -1,20 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { generateNewsletter, extractThreadContent } from "@/lib/openai";
+import { generateNewsletter } from "@/lib/openai";
 import { fetchThreadFromUrl, parseManualThreadInput } from "@/lib/thread-scraper";
 import { createClient } from "@/lib/supabase/server";
 import type { Affiliate, ConversionResponse } from "@/types";
+
+export const runtime = "nodejs";
 
 const ConvertSchema = z.object({
   threadUrl: z.string().url().optional(),
   manualContent: z.string().optional(),
   style: z.enum(["professional", "casual", "storytelling"]).default("professional"),
-  includeAffiliates: z.boolean().default(true),
+  includeAffiliates: z.boolean().default(true)
 });
+
+type TweetLike = { text: string; [key: string]: unknown };
 
 export async function POST(request: NextRequest): Promise<NextResponse<ConversionResponse>> {
   try {
-    const body = await request.json();
+    const body: unknown = await request.json();
     const { threadUrl, manualContent, style, includeAffiliates } = ConvertSchema.parse(body);
 
     if (!threadUrl && !manualContent) {
@@ -24,11 +28,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<Conversio
       );
     }
 
-    // Get authenticated user (optional for demo)
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
 
-    // Check credits for authenticated users
     if (user) {
       const { data: profile } = await supabase
         .from("users")
@@ -44,26 +48,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<Conversio
       }
     }
 
-    // Extract tweets from URL or manual input
-    let tweets;
+    let tweets: TweetLike[] = [];
+
     if (manualContent) {
-      tweets = parseManualThreadInput(manualContent);
+      tweets = parseManualThreadInput(manualContent) as TweetLike[];
     } else if (threadUrl) {
-      const rawContent = await fetchThreadFromUrl(threadUrl);
-      if (rawContent.length === 1 && rawContent[0].text.includes("Configure Twitter API")) {
-        // API not configured, use the URL as a hint to extract content
-        tweets = rawContent;
-      } else {
-        tweets = rawContent;
-      }
+      const rawContent = (await fetchThreadFromUrl(threadUrl)) as TweetLike[];
+      tweets = rawContent;
     } else {
-      return NextResponse.json(
-        { success: false, error: "No content provided" },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "No content provided" }, { status: 400 });
     }
 
-    // Get user's affiliates if authenticated and requested
     let affiliates: Affiliate[] = [];
     if (user && includeAffiliates) {
       const { data } = await supabase
@@ -71,13 +66,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<Conversio
         .select("*")
         .eq("user_id", user.id)
         .eq("is_active", true);
-      affiliates = data || [];
+
+      affiliates = (data as Affiliate[]) || [];
     }
 
-    // Generate newsletter with OpenAI
     const newsletter = await generateNewsletter(tweets, affiliates, style);
 
-    // Save thread and deduct credit for authenticated users
     if (user) {
       const threadId = threadUrl?.match(/status\/(\d+)/)?.[1] || `manual_${Date.now()}`;
 
@@ -88,10 +82,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<Conversio
         original_tweets: tweets,
         newsletter_content: newsletter.content,
         title: newsletter.title,
-        status: "completed",
+        status: "completed"
       });
 
-      // Deduct credit for free users
       const { data: profile } = await supabase
         .from("users")
         .select("plan, credits")
@@ -111,8 +104,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<Conversio
       newsletter: {
         title: newsletter.title,
         content: newsletter.content,
-        wordCount: newsletter.wordCount,
-      },
+        wordCount: newsletter.wordCount
+      }
     });
   } catch (error) {
     console.error("Conversion error:", error);
