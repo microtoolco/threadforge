@@ -1,9 +1,13 @@
 import OpenAI from "openai";
 import type { Tweet, Affiliate } from "@/types";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function getOpenAIClient() {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY environment variable is not set");
+  }
+  return new OpenAI({ apiKey });
+}
 
 interface NewsletterResult {
   title: string;
@@ -52,6 +56,7 @@ Requirements:
 
 Output the newsletter in clean Markdown format.`;
 
+  const openai = getOpenAIClient();
   const completion = await openai.chat.completions.create({
     model: "gpt-4o",
     messages: [
@@ -92,6 +97,7 @@ Return format:
 
 Extract all tweets in order. If no images, use empty array. If author unknown, use "@unknown".`;
 
+  const openai = getOpenAIClient();
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
