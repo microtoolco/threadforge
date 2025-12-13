@@ -3,7 +3,7 @@ import { z } from "zod";
 import { generateNewsletter } from "@/lib/openai";
 import { fetchThreadFromUrl, parseManualThreadInput } from "@/lib/thread-scraper";
 import { createClient } from "@/lib/supabase/server";
-import type { Affiliate, ConversionResponse } from "@/types";
+import type { Affiliate, ConversionResponse, Tweet } from "@/types";
 
 export const runtime = "nodejs";
 
@@ -14,8 +14,15 @@ const ConvertSchema = z.object({
   includeAffiliates: z.boolean().default(true)
 });
 
-// ✅ Only require what we actually need
-type TweetLike = { text: string };
+function toTweetArray(input: Array<Partial<Tweet> & { text: string }>, fallbackAuthor = "Manual") : Tweet[] {
+  const now = new Date().toISOString();
+  return input.map((t, idx) => ({
+    id: t.id ?? `manual_${Date.now()}_${idx}`,
+    text: t.text,
+    author: t.author ?? fallbackAuthor,
+    created_at: t.created_at ?? now
+  }));
+}
 
 export async function POST(request: NextRequest): Promise<NextResponse<ConversionResponse>> {
   try {
@@ -34,7 +41,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<Conversio
       data: { user }
     } = await supabase.auth.getUser();
 
-    // Check credits for authenticated users
     if (user) {
       const { data: profile } = await supabase
         .from("users")
@@ -50,12 +56,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<Conversio
       }
     }
 
-    // Extract tweets from URL or manual input
-    let tweets: TweetLike[] = [];
+    let tweets: Tweet[] = [];
 
     if (manualContent) {
-      tweets = parseManualThreadInput(manualContent);
+      const parsed = parseManualThreadInput(manualContent);
+      // parsed likely returns items with at least { text }, so normalize into Tweet[]
+      tweets = toTweetArray(parsed as Array<Partial<Tweet> & { text: string }>, user?.email ?? "Manual");
     } else if (threadUrl) {
+      // fetchThreadFromUrl should already return Tweet[]
       tweets = await fetchThreadFromUrl(threadUrl);
     } else {
       return NextResponse.json(
@@ -64,7 +72,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<Conversio
       );
     }
 
-    // Get user's affiliates if authenticated and requested
     let affiliates: Affiliate[] = [];
     if (user && includeAffiliates) {
       const { data } = await supabase
@@ -76,10 +83,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<Conversio
       affiliates = (data as Affiliate[]) || [];
     }
 
-    // Generate newsletter with OpenAI
     const newsletter = await generateNewsletter(tweets, affiliates, style);
 
-    // Save thread and deduct credit for authenticated users
     if (user) {
       const threadId = threadUrl?.match(/status\/(\d+)/)?.[1] || `manual_${Date.now()}`;
 
