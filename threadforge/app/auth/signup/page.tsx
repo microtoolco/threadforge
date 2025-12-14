@@ -26,12 +26,9 @@ function SignupContent() {
 
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signUp({
+      const { error, data } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(returnUrl)}`,
-        },
       });
 
       if (error) {
@@ -39,7 +36,13 @@ function SignupContent() {
         return;
       }
 
-      setSuccess(true);
+      // If user is confirmed immediately (email confirmation disabled), redirect to dashboard
+      if (data.user && data.session) {
+        router.push(returnUrl);
+      } else {
+        // Fallback to success message if confirmation is still required
+        setSuccess(true);
+      }
     } catch {
       setError("An unexpected error occurred");
     } finally {
