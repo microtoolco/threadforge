@@ -181,23 +181,90 @@ export default function LandingPage() {
                     </Button>
                   </div>
                 </div>
-                <div className="bg-white rounded-lg p-6 max-h-[500px] overflow-y-auto border prose prose-slate max-w-none">
-                  <ReactMarkdown
-                    components={{
-                      h1: ({ children }) => <h1 className="text-2xl font-bold mb-4 text-slate-900">{children}</h1>,
-                      h2: ({ children }) => <h2 className="text-xl font-semibold mt-6 mb-3 text-slate-800">{children}</h2>,
-                      h3: ({ children }) => <h3 className="text-lg font-semibold mt-4 mb-2 text-slate-700">{children}</h3>,
-                      p: ({ children }) => <p className="mb-4 text-slate-600 leading-relaxed">{children}</p>,
-                      ul: ({ children }) => <ul className="list-disc pl-6 mb-4 space-y-1">{children}</ul>,
-                      ol: ({ children }) => <ol className="list-decimal pl-6 mb-4 space-y-1">{children}</ol>,
-                      li: ({ children }) => <li className="text-slate-600">{children}</li>,
-                      a: ({ href, children }) => <a href={href} className="text-primary hover:underline">{children}</a>,
-                      blockquote: ({ children }) => <blockquote className="border-l-4 border-primary pl-4 italic text-slate-500 my-4">{children}</blockquote>,
-                      strong: ({ children }) => <strong className="font-semibold text-slate-800">{children}</strong>,
-                    }}
-                  >
-                    {newsletter}
-                  </ReactMarkdown>
+                {/* Beautiful Newsletter Preview */}
+                <div className="rounded-2xl overflow-hidden shadow-2xl">
+                  {/* Gradient Header */}
+                  <div className="bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-600 px-6 py-8 text-center">
+                    <span className="inline-block bg-white/20 backdrop-blur-sm text-white text-xs font-medium px-3 py-1 rounded-full mb-3">
+                      AI-Converted Newsletter
+                    </span>
+                    <h2 className="text-2xl font-bold text-white mb-1">ThreadForge Output</h2>
+                    <p className="text-white/80 text-sm">X Thread → Professional Newsletter in seconds</p>
+                  </div>
+
+                  {/* Newsletter Content Card */}
+                  <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-indigo-600/10 p-4">
+                    <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 max-h-[500px] overflow-y-auto">
+                      <ReactMarkdown
+                        components={{
+                          h1: ({ children }) => (
+                            <h1 className="text-2xl md:text-3xl font-bold mb-2 text-slate-900 leading-tight">{children}</h1>
+                          ),
+                          h2: ({ children }) => (
+                            <h2 className="text-xl font-bold mt-8 mb-4 text-indigo-600">{children}</h2>
+                          ),
+                          h3: ({ children }) => (
+                            <h3 className="text-lg font-semibold mt-6 mb-3 text-slate-800">{children}</h3>
+                          ),
+                          p: ({ children }) => {
+                            const text = String(children);
+                            // Check if this is a callout (starts with emoji or special markers)
+                            if (text.includes('winning right now') || text.includes('key takeaway') || text.includes('remember:')) {
+                              return (
+                                <div className="my-6 p-4 rounded-lg bg-gradient-to-r from-yellow-50 via-orange-50 to-pink-50 border-l-4 border-yellow-400">
+                                  <p className="text-slate-700 font-medium">{children}</p>
+                                </div>
+                              );
+                            }
+                            return <p className="mb-4 text-slate-600 leading-relaxed">{children}</p>;
+                          },
+                          ul: ({ children }) => (
+                            <ul className="my-4 space-y-3">{children}</ul>
+                          ),
+                          ol: ({ children }) => (
+                            <ol className="list-decimal pl-6 mb-4 space-y-2">{children}</ol>
+                          ),
+                          li: ({ children }) => (
+                            <li className="flex items-start gap-2 text-slate-600">
+                              <span className="w-2 h-2 bg-indigo-500 rounded-full mt-2 flex-shrink-0"></span>
+                              <span>{children}</span>
+                            </li>
+                          ),
+                          a: ({ href, children }) => (
+                            <a href={href} className="text-indigo-600 hover:text-indigo-800 underline decoration-indigo-300 hover:decoration-indigo-500 transition">{children}</a>
+                          ),
+                          blockquote: ({ children }) => (
+                            <blockquote className="my-6 pl-4 border-l-4 border-indigo-400 bg-indigo-50/50 py-3 pr-4 rounded-r-lg">
+                              <p className="text-slate-600 italic">{children}</p>
+                            </blockquote>
+                          ),
+                          strong: ({ children }) => (
+                            <strong className="font-semibold text-slate-800">{children}</strong>
+                          ),
+                          hr: () => (
+                            <hr className="my-6 border-t border-slate-200" />
+                          ),
+                        }}
+                      >
+                        {newsletter}
+                      </ReactMarkdown>
+
+                      {/* Footer */}
+                      <div className="mt-8 pt-6 border-t border-slate-100 text-center">
+                        <p className="text-sm text-slate-500">
+                          Enjoyed this newsletter? It was converted from an X thread using ThreadForge —
+                          <br />transforming social content into professional newsletters in seconds.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Branding Footer */}
+                  <div className="bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-600 px-6 py-3 text-center">
+                    <p className="text-white/90 text-sm flex items-center justify-center gap-1">
+                      Powered by ThreadForge <Zap className="w-4 h-4 text-yellow-300 fill-yellow-300" />
+                    </p>
+                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground text-center">
                   Sign up to export directly to Beehiiv or Substack
