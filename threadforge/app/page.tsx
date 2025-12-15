@@ -20,6 +20,73 @@ import {
   ExternalLink,
 } from "lucide-react";
 
+// Color themes for newsletter variations
+const colorThemes = [
+  {
+    name: "indigo",
+    gradient: "from-indigo-500 via-purple-500 to-indigo-600",
+    accent: "text-indigo-600",
+    bullet: "bg-indigo-500",
+    border: "border-indigo-400",
+    bgLight: "bg-indigo-50/50",
+    callout: "from-yellow-50 via-orange-50 to-pink-50 border-yellow-400",
+  },
+  {
+    name: "ocean",
+    gradient: "from-cyan-500 via-blue-500 to-teal-600",
+    accent: "text-cyan-600",
+    bullet: "bg-cyan-500",
+    border: "border-cyan-400",
+    bgLight: "bg-cyan-50/50",
+    callout: "from-cyan-50 via-sky-50 to-blue-50 border-cyan-400",
+  },
+  {
+    name: "sunset",
+    gradient: "from-orange-500 via-rose-500 to-pink-600",
+    accent: "text-rose-600",
+    bullet: "bg-rose-500",
+    border: "border-rose-400",
+    bgLight: "bg-rose-50/50",
+    callout: "from-orange-50 via-rose-50 to-pink-50 border-rose-400",
+  },
+  {
+    name: "forest",
+    gradient: "from-emerald-500 via-green-500 to-teal-600",
+    accent: "text-emerald-600",
+    bullet: "bg-emerald-500",
+    border: "border-emerald-400",
+    bgLight: "bg-emerald-50/50",
+    callout: "from-emerald-50 via-green-50 to-teal-50 border-emerald-400",
+  },
+  {
+    name: "royal",
+    gradient: "from-violet-500 via-purple-600 to-fuchsia-600",
+    accent: "text-violet-600",
+    bullet: "bg-violet-500",
+    border: "border-violet-400",
+    bgLight: "bg-violet-50/50",
+    callout: "from-violet-50 via-purple-50 to-fuchsia-50 border-violet-400",
+  },
+  {
+    name: "midnight",
+    gradient: "from-slate-700 via-slate-800 to-slate-900",
+    accent: "text-slate-700",
+    bullet: "bg-slate-600",
+    border: "border-slate-400",
+    bgLight: "bg-slate-50/50",
+    callout: "from-slate-50 via-gray-50 to-zinc-50 border-slate-400",
+  },
+  {
+    name: "coral",
+    gradient: "from-red-400 via-orange-400 to-amber-500",
+    accent: "text-orange-600",
+    bullet: "bg-orange-500",
+    border: "border-orange-400",
+    bgLight: "bg-orange-50/50",
+    callout: "from-red-50 via-orange-50 to-amber-50 border-orange-400",
+  },
+];
+
 export default function LandingPage() {
   const [threadUrl, setThreadUrl] = useState("");
   const [manualContent, setManualContent] = useState("");
@@ -27,6 +94,7 @@ export default function LandingPage() {
   const [isConverting, setIsConverting] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [theme, setTheme] = useState(colorThemes[0]);
 
   const handleConvert = async () => {
     setIsConverting(true);
@@ -43,6 +111,9 @@ export default function LandingPage() {
       const data = await response.json();
       if (data.success && data.newsletter) {
         setNewsletter(data.newsletter.content);
+        // Pick a random theme for each conversion
+        const randomTheme = colorThemes[Math.floor(Math.random() * colorThemes.length)];
+        setTheme(randomTheme);
       } else {
         setNewsletter(`Error: ${data.error || "Conversion failed"}`);
       }
@@ -181,10 +252,10 @@ export default function LandingPage() {
                     </Button>
                   </div>
                 </div>
-                {/* Beautiful Newsletter Preview */}
+                {/* Beautiful Newsletter Preview with Dynamic Theme */}
                 <div className="rounded-2xl overflow-hidden shadow-2xl">
                   {/* Gradient Header */}
-                  <div className="bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-600 px-6 py-8 text-center">
+                  <div className={`bg-gradient-to-br ${theme.gradient} px-6 py-8 text-center`}>
                     <span className="inline-block bg-white/20 backdrop-blur-sm text-white text-xs font-medium px-3 py-1 rounded-full mb-3">
                       AI-Converted Newsletter
                     </span>
@@ -193,7 +264,7 @@ export default function LandingPage() {
                   </div>
 
                   {/* Newsletter Content Card */}
-                  <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-indigo-600/10 p-4">
+                  <div className={`bg-gradient-to-br ${theme.gradient.replace(/500|600|700|800|900/g, '100')} bg-opacity-10 p-4`} style={{ background: `linear-gradient(to bottom right, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1))` }}>
                     <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 max-h-[500px] overflow-y-auto">
                       <ReactMarkdown
                         components={{
@@ -201,7 +272,7 @@ export default function LandingPage() {
                             <h1 className="text-2xl md:text-3xl font-bold mb-2 text-slate-900 leading-tight">{children}</h1>
                           ),
                           h2: ({ children }) => (
-                            <h2 className="text-xl font-bold mt-8 mb-4 text-indigo-600">{children}</h2>
+                            <h2 className={`text-xl font-bold mt-8 mb-4 ${theme.accent}`}>{children}</h2>
                           ),
                           h3: ({ children }) => (
                             <h3 className="text-lg font-semibold mt-6 mb-3 text-slate-800">{children}</h3>
@@ -209,9 +280,9 @@ export default function LandingPage() {
                           p: ({ children }) => {
                             const text = String(children);
                             // Check if this is a callout (starts with emoji or special markers)
-                            if (text.includes('winning right now') || text.includes('key takeaway') || text.includes('remember:')) {
+                            if (text.includes('winning right now') || text.includes('key takeaway') || text.includes('remember:') || text.includes('bottom line') || text.includes('important:')) {
                               return (
-                                <div className="my-6 p-4 rounded-lg bg-gradient-to-r from-yellow-50 via-orange-50 to-pink-50 border-l-4 border-yellow-400">
+                                <div className={`my-6 p-4 rounded-lg bg-gradient-to-r ${theme.callout} border-l-4`}>
                                   <p className="text-slate-700 font-medium">{children}</p>
                                 </div>
                               );
@@ -226,15 +297,15 @@ export default function LandingPage() {
                           ),
                           li: ({ children }) => (
                             <li className="flex items-start gap-2 text-slate-600">
-                              <span className="w-2 h-2 bg-indigo-500 rounded-full mt-2 flex-shrink-0"></span>
+                              <span className={`w-2 h-2 ${theme.bullet} rounded-full mt-2 flex-shrink-0`}></span>
                               <span>{children}</span>
                             </li>
                           ),
                           a: ({ href, children }) => (
-                            <a href={href} className="text-indigo-600 hover:text-indigo-800 underline decoration-indigo-300 hover:decoration-indigo-500 transition">{children}</a>
+                            <a href={href} className={`${theme.accent} hover:opacity-80 underline transition`}>{children}</a>
                           ),
                           blockquote: ({ children }) => (
-                            <blockquote className="my-6 pl-4 border-l-4 border-indigo-400 bg-indigo-50/50 py-3 pr-4 rounded-r-lg">
+                            <blockquote className={`my-6 pl-4 border-l-4 ${theme.border} ${theme.bgLight} py-3 pr-4 rounded-r-lg`}>
                               <p className="text-slate-600 italic">{children}</p>
                             </blockquote>
                           ),
@@ -260,11 +331,26 @@ export default function LandingPage() {
                   </div>
 
                   {/* Branding Footer */}
-                  <div className="bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-600 px-6 py-3 text-center">
+                  <div className={`bg-gradient-to-br ${theme.gradient} px-6 py-3 text-center`}>
                     <p className="text-white/90 text-sm flex items-center justify-center gap-1">
                       Powered by ThreadForge <Zap className="w-4 h-4 text-yellow-300 fill-yellow-300" />
                     </p>
                   </div>
+                </div>
+
+                {/* Theme Switcher */}
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  <span className="text-xs text-muted-foreground mr-2">Change theme:</span>
+                  {colorThemes.map((t) => (
+                    <button
+                      key={t.name}
+                      onClick={() => setTheme(t)}
+                      className={`w-6 h-6 rounded-full bg-gradient-to-br ${t.gradient} border-2 transition-all ${
+                        theme.name === t.name ? "border-slate-900 scale-110" : "border-transparent hover:scale-105"
+                      }`}
+                      title={t.name}
+                    />
+                  ))}
                 </div>
                 <p className="text-sm text-muted-foreground text-center">
                   Sign up to export directly to Beehiiv or Substack
