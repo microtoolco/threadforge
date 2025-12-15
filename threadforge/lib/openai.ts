@@ -89,7 +89,10 @@ Write with the quality expected from a top publication. Return ONLY valid JSON.`
     max_tokens: 4000,
   });
 
-  const responseText = completion.choices[0]?.message?.content || "{}";
+  let responseText = completion.choices[0]?.message?.content || "{}";
+
+  // Strip markdown code fences if present
+  responseText = responseText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
 
   try {
     const parsed = JSON.parse(responseText);

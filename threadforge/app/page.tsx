@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -180,8 +181,23 @@ export default function LandingPage() {
                     </Button>
                   </div>
                 </div>
-                <div className="bg-slate-50 rounded-lg p-4 max-h-[400px] overflow-y-auto">
-                  <pre className="whitespace-pre-wrap text-sm font-mono">{newsletter}</pre>
+                <div className="bg-white rounded-lg p-6 max-h-[500px] overflow-y-auto border prose prose-slate max-w-none">
+                  <ReactMarkdown
+                    components={{
+                      h1: ({ children }) => <h1 className="text-2xl font-bold mb-4 text-slate-900">{children}</h1>,
+                      h2: ({ children }) => <h2 className="text-xl font-semibold mt-6 mb-3 text-slate-800">{children}</h2>,
+                      h3: ({ children }) => <h3 className="text-lg font-semibold mt-4 mb-2 text-slate-700">{children}</h3>,
+                      p: ({ children }) => <p className="mb-4 text-slate-600 leading-relaxed">{children}</p>,
+                      ul: ({ children }) => <ul className="list-disc pl-6 mb-4 space-y-1">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal pl-6 mb-4 space-y-1">{children}</ol>,
+                      li: ({ children }) => <li className="text-slate-600">{children}</li>,
+                      a: ({ href, children }) => <a href={href} className="text-primary hover:underline">{children}</a>,
+                      blockquote: ({ children }) => <blockquote className="border-l-4 border-primary pl-4 italic text-slate-500 my-4">{children}</blockquote>,
+                      strong: ({ children }) => <strong className="font-semibold text-slate-800">{children}</strong>,
+                    }}
+                  >
+                    {newsletter}
+                  </ReactMarkdown>
                 </div>
                 <p className="text-sm text-muted-foreground text-center">
                   Sign up to export directly to Beehiiv or Substack
