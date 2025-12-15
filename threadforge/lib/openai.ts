@@ -77,7 +77,7 @@ Write with the quality expected from a top publication. Return ONLY valid JSON.`
 
   const groq = getGroqClient();
   const completion = await groq.chat.completions.create({
-    model: "llama-3.1-70b-versatile",
+    model: "llama-3.3-70b-versatile",
     messages: [
       {
         role: "system",
@@ -149,7 +149,7 @@ Extract all tweets in order. If no images, use empty array. If author unknown, u
 
   const groq = getGroqClient();
   const completion = await groq.chat.completions.create({
-    model: "llama-3.1-8b-instant",
+    model: "llama-3.3-70b-versatile",
     messages: [
       {
         role: "system",
