@@ -70,3 +70,45 @@ export interface Stats {
   plan?: string;
   monthlyLimit?: number;
 }
+
+// Cross-platform content repurposing types
+export type ContentFormat = "newsletter" | "linkedin" | "blog" | "instagram" | "twitter_summary";
+
+export interface FormatOutput {
+  format: ContentFormat;
+  title: string;
+  content: string;
+  wordCount: number;
+  metadata?: {
+    slideCount?: number;      // Instagram carousel
+    tweetCount?: number;      // Twitter summary
+    hashtags?: string[];      // LinkedIn/Instagram
+    readingTime?: string;     // Blog post
+    slides?: InstagramSlide[]; // Instagram carousel slides
+    tweets?: SummaryTweet[];  // Twitter summary tweets
+  };
+}
+
+export interface InstagramSlide {
+  slideNumber: number;
+  text: string;
+  visualDirection?: string;
+}
+
+export interface SummaryTweet {
+  number: number;
+  content: string;
+  charCount: number;
+}
+
+export interface MultiFormatResponse {
+  success: boolean;
+  formats?: {
+    newsletter?: FormatOutput;
+    linkedin?: FormatOutput;
+    blog?: FormatOutput;
+    instagram?: FormatOutput;
+    twitter_summary?: FormatOutput;
+  };
+  error?: string;
+}

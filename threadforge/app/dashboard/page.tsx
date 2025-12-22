@@ -22,9 +22,11 @@ import {
   BarChart3,
   CreditCard,
   Link as LinkIcon,
+  Layers,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { Stats, Thread, Affiliate } from "@/types";
+import { FormatTabs } from "@/components/content/FormatTabs";
+import type { Stats, Thread, Affiliate, FormatOutput, ContentFormat } from "@/types";
 
 function DashboardContent() {
   const router = useRouter();
@@ -44,6 +46,8 @@ function DashboardContent() {
   const [showManual, setShowManual] = useState(false);
   const [converting, setConverting] = useState(false);
   const [result, setResult] = useState<{ title: string; content: string } | null>(null);
+  const [multiFormatResult, setMultiFormatResult] = useState<Partial<Record<ContentFormat, FormatOutput>> | null>(null);
+  const [multiFormatMode, setMultiFormatMode] = useState(false);
   const [copied, setCopied] = useState(false);
 
   // Affiliate modal state
@@ -101,6 +105,7 @@ function DashboardContent() {
   const handleConvert = async () => {
     setConverting(true);
     setResult(null);
+    setMultiFormatResult(null);
 
     // Validate URL format if using URL mode
     if (threadUrl && !showManual) {
@@ -112,6 +117,8 @@ function DashboardContent() {
       }
     }
 
+    const isPro = profile?.plan === "monthly" || profile?.plan === "lifetime";
+
     try {
       const response = await fetch("/api/convert", {
         method: "POST",
@@ -121,12 +128,26 @@ function DashboardContent() {
           manualContent: manualContent || undefined,
           style: "professional",
           includeAffiliates: true,
+          multiFormat: multiFormatMode && isPro,
+          formats: multiFormatMode && isPro
+            ? ["newsletter", "linkedin", "blog", "instagram", "twitter_summary"]
+            : ["newsletter"],
         }),
       });
 
       const data = await response.json();
-      if (data.success && data.newsletter) {
-        setResult(data.newsletter);
+
+      if (data.success) {
+        // Handle multi-format response
+        if (data.formats) {
+          setMultiFormatResult(data.formats);
+          setResult(null);
+        } else if (data.newsletter) {
+          // Standard newsletter-only response
+          setResult(data.newsletter);
+          setMultiFormatResult(null);
+        }
+
         // Refresh stats and threads
         const statsRes = await fetch("/api/stats");
         if (statsRes.ok) setStats(await statsRes.json());
@@ -346,16 +367,74 @@ function DashboardContent() {
                   />
                 )}
 
+                {/* Multi-format toggle */}
+                <div className="flex items-center justify-between p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-100">
+                  <div className="flex items-center gap-3">
+                    <Layers className="w-5 h-5 text-indigo-600" />
+                    <div>
+                      <p className="font-medium text-sm">Multi-Format Mode</p>
+                      <p className="text-xs text-muted-foreground">
+                        Get Newsletter + LinkedIn + Blog + Instagram + Twitter
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {profile?.plan === "free" && (
+                      <Badge variant="secondary" className="text-xs">PRO</Badge>
+                    )}
+                    <button
+                      onClick={() => {
+                        if (profile?.plan === "free") {
+                          router.push("/api/checkout?plan=monthly");
+                        } else {
+                          setMultiFormatMode(!multiFormatMode);
+                        }
+                      }}
+                      className={`
+                        relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                        ${multiFormatMode && profile?.plan !== "free"
+                          ? "bg-indigo-600"
+                          : "bg-gray-200"
+                        }
+                      `}
+                    >
+                      <span
+                        className={`
+                          inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                          ${multiFormatMode && profile?.plan !== "free" ? "translate-x-6" : "translate-x-1"}
+                        `}
+                      />
+                    </button>
+                  </div>
+                </div>
+
                 <Button
                   onClick={handleConvert}
                   disabled={converting || (!threadUrl && !manualContent)}
                   className="w-full"
                 >
-                  {converting ? "Converting..." : "Convert to Newsletter"}
+                  {converting
+                    ? "Converting..."
+                    : multiFormatMode && profile?.plan !== "free"
+                      ? "Generate All 5 Formats"
+                      : "Convert to Newsletter"
+                  }
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
 
-                {result && (
+                {/* Multi-format results with tabs */}
+                {multiFormatResult && (
+                  <div className="mt-6">
+                    <FormatTabs
+                      formats={multiFormatResult}
+                      isPro={profile?.plan === "monthly" || profile?.plan === "lifetime"}
+                      onUpgrade={() => router.push("/api/checkout?plan=monthly")}
+                    />
+                  </div>
+                )}
+
+                {/* Standard single-format result */}
+                {result && !multiFormatResult && (
                   <div className="mt-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold">{result.title}</h3>
@@ -447,11 +526,14 @@ function DashboardContent() {
           <div className="space-y-6">
             {/* Upgrade Card */}
             {profile?.plan === "free" && (
-              <Card className="border-primary">
+              <Card className="border-primary bg-gradient-to-br from-indigo-50 to-purple-50">
                 <CardHeader>
-                  <CardTitle>Upgrade to Pro</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-indigo-600" />
+                    Upgrade to Pro
+                  </CardTitle>
                   <CardDescription>
-                    Unlock unlimited conversions and newsletter exports
+                    Get 5 content formats from every thread: Newsletter, LinkedIn, Blog, Instagram & Twitter
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">

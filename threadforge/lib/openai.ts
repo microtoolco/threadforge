@@ -1,5 +1,9 @@
 import OpenAI from "openai";
-import type { Tweet, Affiliate } from "@/types";
+import type { Tweet, Affiliate, FormatOutput, ContentFormat } from "@/types";
+import { getLinkedInPrompt, linkedInSystemPrompt } from "./prompts/linkedin";
+import { getBlogPrompt, blogSystemPrompt } from "./prompts/blog";
+import { getInstagramPrompt, instagramSystemPrompt } from "./prompts/instagram";
+import { getTwitterSummaryPrompt, twitterSummarySystemPrompt } from "./prompts/twitter-summary";
 
 // Use Groq API (OpenAI-compatible) for faster, cheaper inference
 function getGroqClient() {
@@ -170,4 +174,250 @@ Extract all tweets in order. If no images, use empty array. If author unknown, u
   } catch {
     return [];
   }
+}
+
+// Helper to strip markdown code fences
+function stripCodeFences(text: string): string {
+  return text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+}
+
+// LinkedIn Post Generation
+export async function generateLinkedInPost(
+  tweets: Tweet[],
+  style: "professional" | "casual" | "storytelling" = "professional"
+): Promise<FormatOutput> {
+  const prompt = getLinkedInPrompt(tweets, style);
+  const groq = getGroqClient();
+
+  const completion = await groq.chat.completions.create({
+    model: "llama-3.3-70b-versatile",
+    messages: [
+      { role: "system", content: linkedInSystemPrompt },
+      { role: "user", content: prompt },
+    ],
+    temperature: 0.7,
+    max_tokens: 2000,
+  });
+
+  const responseText = stripCodeFences(completion.choices[0]?.message?.content || "{}");
+
+  try {
+    const parsed = JSON.parse(responseText);
+    return {
+      format: "linkedin",
+      title: "LinkedIn Post",
+      content: parsed.content || "",
+      wordCount: parsed.wordCount || parsed.content?.split(/\s+/).length || 0,
+      metadata: {
+        hashtags: parsed.hashtags || [],
+      },
+    };
+  } catch {
+    return {
+      format: "linkedin",
+      title: "LinkedIn Post",
+      content: responseText,
+      wordCount: responseText.split(/\s+/).length,
+      metadata: { hashtags: [] },
+    };
+  }
+}
+
+// Blog Post Generation
+export async function generateBlogPost(
+  tweets: Tweet[],
+  affiliates: Affiliate[],
+  style: "professional" | "casual" | "storytelling" = "professional"
+): Promise<FormatOutput> {
+  const prompt = getBlogPrompt(tweets, affiliates, style);
+  const groq = getGroqClient();
+
+  const completion = await groq.chat.completions.create({
+    model: "llama-3.3-70b-versatile",
+    messages: [
+      { role: "system", content: blogSystemPrompt },
+      { role: "user", content: prompt },
+    ],
+    temperature: 0.7,
+    max_tokens: 4000,
+  });
+
+  const responseText = stripCodeFences(completion.choices[0]?.message?.content || "{}");
+
+  try {
+    const parsed = JSON.parse(responseText);
+    const content = parsed.content || "";
+    return {
+      format: "blog",
+      title: parsed.title || "Blog Post",
+      content,
+      wordCount: parsed.wordCount || content.split(/\s+/).length,
+      metadata: {
+        readingTime: parsed.readingTime || `${Math.ceil(content.split(/\s+/).length / 200)} min read`,
+      },
+    };
+  } catch {
+    return {
+      format: "blog",
+      title: "Blog Post",
+      content: responseText,
+      wordCount: responseText.split(/\s+/).length,
+      metadata: { readingTime: "5 min read" },
+    };
+  }
+}
+
+// Instagram Carousel Generation
+export async function generateInstagramCarousel(
+  tweets: Tweet[]
+): Promise<FormatOutput> {
+  const prompt = getInstagramPrompt(tweets);
+  const groq = getGroqClient();
+
+  const completion = await groq.chat.completions.create({
+    model: "llama-3.3-70b-versatile",
+    messages: [
+      { role: "system", content: instagramSystemPrompt },
+      { role: "user", content: prompt },
+    ],
+    temperature: 0.7,
+    max_tokens: 3000,
+  });
+
+  const responseText = stripCodeFences(completion.choices[0]?.message?.content || "{}");
+
+  try {
+    const parsed = JSON.parse(responseText);
+    const slides = parsed.slides || [];
+    const content = slides.map((s: { slideNumber: number; text: string; visualDirection?: string }) =>
+      `**Slide ${s.slideNumber}:** ${s.text}${s.visualDirection ? `\n_Visual: ${s.visualDirection}_` : ""}`
+    ).join("\n\n");
+
+    return {
+      format: "instagram",
+      title: "Instagram Carousel",
+      content: content + (parsed.caption ? `\n\n---\n**Caption:**\n${parsed.caption}` : ""),
+      wordCount: content.split(/\s+/).length,
+      metadata: {
+        slideCount: parsed.slideCount || slides.length,
+        hashtags: parsed.hashtags || [],
+        slides: slides,
+      },
+    };
+  } catch {
+    return {
+      format: "instagram",
+      title: "Instagram Carousel",
+      content: responseText,
+      wordCount: responseText.split(/\s+/).length,
+      metadata: { slideCount: 0, hashtags: [], slides: [] },
+    };
+  }
+}
+
+// Twitter Summary Thread Generation
+export async function generateTwitterSummary(
+  tweets: Tweet[]
+): Promise<FormatOutput> {
+  const prompt = getTwitterSummaryPrompt(tweets);
+  const groq = getGroqClient();
+
+  const completion = await groq.chat.completions.create({
+    model: "llama-3.3-70b-versatile",
+    messages: [
+      { role: "system", content: twitterSummarySystemPrompt },
+      { role: "user", content: prompt },
+    ],
+    temperature: 0.7,
+    max_tokens: 2000,
+  });
+
+  const responseText = stripCodeFences(completion.choices[0]?.message?.content || "{}");
+
+  try {
+    const parsed = JSON.parse(responseText);
+    const summaryTweets = parsed.tweets || [];
+    const content = summaryTweets.map((t: { number: number; content: string; charCount: number }) =>
+      `${t.content}\n_(${t.charCount} chars)_`
+    ).join("\n\n");
+
+    return {
+      format: "twitter_summary",
+      title: "Twitter Summary Thread",
+      content,
+      wordCount: content.split(/\s+/).length,
+      metadata: {
+        tweetCount: parsed.tweetCount || summaryTweets.length,
+        tweets: summaryTweets,
+      },
+    };
+  } catch {
+    return {
+      format: "twitter_summary",
+      title: "Twitter Summary Thread",
+      content: responseText,
+      wordCount: responseText.split(/\s+/).length,
+      metadata: { tweetCount: 0, tweets: [] },
+    };
+  }
+}
+
+// Generate all formats in parallel
+export async function generateAllFormats(
+  tweets: Tweet[],
+  affiliates: Affiliate[],
+  style: "professional" | "casual" | "storytelling" = "professional",
+  requestedFormats: ContentFormat[] = ["newsletter", "linkedin", "blog", "instagram", "twitter_summary"]
+): Promise<Record<ContentFormat, FormatOutput>> {
+  const results: Partial<Record<ContentFormat, FormatOutput>> = {};
+  const promises: Promise<void>[] = [];
+
+  if (requestedFormats.includes("newsletter")) {
+    promises.push(
+      generateNewsletter(tweets, affiliates, style).then((newsletter) => {
+        results.newsletter = {
+          format: "newsletter",
+          title: newsletter.title,
+          content: newsletter.content,
+          wordCount: newsletter.wordCount,
+          metadata: {},
+        };
+      })
+    );
+  }
+
+  if (requestedFormats.includes("linkedin")) {
+    promises.push(
+      generateLinkedInPost(tweets, style).then((result) => {
+        results.linkedin = result;
+      })
+    );
+  }
+
+  if (requestedFormats.includes("blog")) {
+    promises.push(
+      generateBlogPost(tweets, affiliates, style).then((result) => {
+        results.blog = result;
+      })
+    );
+  }
+
+  if (requestedFormats.includes("instagram")) {
+    promises.push(
+      generateInstagramCarousel(tweets).then((result) => {
+        results.instagram = result;
+      })
+    );
+  }
+
+  if (requestedFormats.includes("twitter_summary")) {
+    promises.push(
+      generateTwitterSummary(tweets).then((result) => {
+        results.twitter_summary = result;
+      })
+    );
+  }
+
+  await Promise.all(promises);
+  return results as Record<ContentFormat, FormatOutput>;
 }

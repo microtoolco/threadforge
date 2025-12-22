@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { generateNewsletter } from "@/lib/openai";
+import { generateNewsletter, generateAllFormats } from "@/lib/openai";
 import { fetchThreadFromUrl, parseManualThreadInput } from "@/lib/thread-scraper";
 import { createClient } from "@/lib/supabase/server";
-import type { Affiliate, ConversionResponse, Tweet } from "@/types";
+import type { Affiliate, ConversionResponse, Tweet, ContentFormat, MultiFormatResponse } from "@/types";
 
 export const runtime = "nodejs";
 
@@ -18,7 +18,9 @@ const ConvertSchema = z.object({
   threadUrl: z.string().url().optional(),
   manualContent: z.string().optional(),
   style: z.enum(["professional", "casual", "storytelling"]).default("professional"),
-  includeAffiliates: z.boolean().default(true)
+  includeAffiliates: z.boolean().default(true),
+  formats: z.array(z.enum(["newsletter", "linkedin", "blog", "instagram", "twitter_summary"])).default(["newsletter"]),
+  multiFormat: z.boolean().default(false)
 });
 
 function toTweetArray(input: Array<Partial<Tweet> & { text: string }>, fallbackAuthor = "Manual") : Tweet[] {
@@ -37,10 +39,10 @@ function getMonthStart(): string {
   return new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse<ConversionResponse>> {
+export async function POST(request: NextRequest): Promise<NextResponse<ConversionResponse | MultiFormatResponse>> {
   try {
     const body: unknown = await request.json();
-    const { threadUrl, manualContent, style, includeAffiliates } = ConvertSchema.parse(body);
+    const { threadUrl, manualContent, style, includeAffiliates, formats, multiFormat } = ConvertSchema.parse(body);
 
     if (!threadUrl && !manualContent) {
       return NextResponse.json(
@@ -124,6 +126,54 @@ export async function POST(request: NextRequest): Promise<NextResponse<Conversio
       affiliates = (data as Affiliate[]) || [];
     }
 
+    // Check if user is requesting multi-format (Pro feature)
+    const userPlan = user ? (await supabase.from("users").select("plan").eq("id", user.id).single()).data?.plan : "free";
+    const isPro = userPlan === "monthly" || userPlan === "lifetime";
+
+    // If multiFormat requested but not Pro, only allow newsletter
+    const allowedFormats: ContentFormat[] = multiFormat && isPro
+      ? formats as ContentFormat[]
+      : ["newsletter"];
+
+    // Generate content based on allowed formats
+    if (multiFormat && isPro && allowedFormats.length > 1) {
+      // Generate all requested formats in parallel
+      const allFormats = await generateAllFormats(tweets, affiliates, style, allowedFormats);
+
+      if (user) {
+        const threadId = threadUrl?.match(/status\/(\d+)/)?.[1] || `manual_${Date.now()}`;
+
+        await supabase.from("threads").insert({
+          user_id: user.id,
+          thread_url: threadUrl || "manual_input",
+          thread_id: threadId,
+          original_tweets: tweets,
+          newsletter_content: allFormats.newsletter?.content || "",
+          title: allFormats.newsletter?.title || "Untitled",
+          status: "completed"
+        });
+
+        const { data: profile } = await supabase
+          .from("users")
+          .select("plan, credits")
+          .eq("id", user.id)
+          .single();
+
+        if (profile?.plan === "free") {
+          await supabase
+            .from("users")
+            .update({ credits: Math.max(0, profile.credits - 1) })
+            .eq("id", user.id);
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        formats: allFormats
+      } as MultiFormatResponse);
+    }
+
+    // Standard newsletter-only flow
     const newsletter = await generateNewsletter(tweets, affiliates, style);
 
     if (user) {
