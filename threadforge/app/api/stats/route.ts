@@ -31,13 +31,6 @@ export async function GET() {
       .select("*", { count: "exact", head: true })
       .eq("user_id", user.id);
 
-    // Get exported threads count
-    const { count: totalExports } = await supabase
-      .from("threads")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .not("exported_to", "is", null);
-
     // Get this month's threads
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
@@ -63,7 +56,7 @@ export async function GET() {
 
     const stats: Stats = {
       totalThreads: totalThreads || 0,
-      totalExports: totalExports || 0,
+      totalExports: 0, // Legacy field, exports removed
       creditsRemaining: conversionsRemaining,
       thisMonth: monthlyUsage,
       plan: plan,

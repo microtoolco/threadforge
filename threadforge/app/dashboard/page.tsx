@@ -17,7 +17,6 @@ import {
   ArrowRight,
   CheckCircle2,
   ExternalLink,
-  Send,
   Sparkles,
   BarChart3,
   CreditCard,
@@ -170,25 +169,6 @@ function DashboardContent() {
     }
   };
 
-  const handleExport = async (threadId: string, platform: "beehiiv" | "substack") => {
-    try {
-      const response = await fetch("/api/export", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ threadId, platform }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        alert(`Sent to ${platform}!`);
-      } else {
-        alert(data.error || "Export failed");
-      }
-    } catch {
-      alert("Export failed");
-    }
-  };
-
   const handleAddAffiliate = async () => {
     if (!newAffiliate.name || !newAffiliate.url) return;
 
@@ -281,10 +261,10 @@ function DashboardContent() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-2">
-                <Send className="w-5 h-5 text-primary" />
+                <Layers className="w-5 h-5 text-primary" />
                 <div>
-                  <p className="text-2xl font-bold">{stats?.totalExports || 0}</p>
-                  <p className="text-sm text-muted-foreground">Exports</p>
+                  <p className="text-2xl font-bold">{(stats?.totalThreads || 0) * 5}</p>
+                  <p className="text-sm text-muted-foreground">Content Pieces</p>
                 </div>
               </div>
             </CardContent>
@@ -490,29 +470,9 @@ function DashboardContent() {
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          {thread.exported_to && (
-                            <Badge variant="success" className="text-xs">
-                              {thread.exported_to}
-                            </Badge>
-                          )}
-                          {profile?.plan !== "free" && !thread.exported_to && (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleExport(thread.id, "beehiiv")}
-                              >
-                                Beehiiv
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleExport(thread.id, "substack")}
-                              >
-                                Substack
-                              </Button>
-                            </>
-                          )}
+                          <Badge variant="secondary" className="text-xs">
+                            {thread.status}
+                          </Badge>
                         </div>
                       </div>
                     ))}

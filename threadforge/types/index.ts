@@ -17,7 +17,7 @@ export interface Thread {
   newsletter_content: string;
   title: string;
   status: "pending" | "processing" | "completed" | "failed";
-  exported_to?: "beehiiv" | "substack" | null;
+  exported_to?: string | null; // Legacy field, no longer used
   created_at: string;
 }
 

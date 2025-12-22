@@ -353,7 +353,7 @@ export default function LandingPage() {
                   ))}
                 </div>
                 <p className="text-sm text-muted-foreground text-center">
-                  Sign up to export directly to Beehiiv or Substack
+                  Sign up to get all 5 content formats from every thread
                 </p>
               </div>
             )}
@@ -385,10 +385,10 @@ export default function LandingPage() {
               <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
                 <Share2 className="w-6 h-6 text-primary" />
               </div>
-              <CardTitle>One-Click Export</CardTitle>
+              <CardTitle>5 Formats, One Click</CardTitle>
               <CardDescription>
-                Send your newsletter directly to Beehiiv or Substack with a single click via our
-                Zapier integration.
+                Get Newsletter, LinkedIn, Blog, Instagram carousel & Twitter summary - all from a
+                single thread conversion.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -465,7 +465,7 @@ export default function LandingPage() {
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  Beehiiv & Substack export
+                  All 5 content formats
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-green-500" />
