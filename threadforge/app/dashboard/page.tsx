@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { FormatTabs } from "@/components/content/FormatTabs";
+import ReactMarkdown from "react-markdown";
 import type { Stats, Thread, Affiliate, FormatOutput, ContentFormat } from "@/types";
 
 function DashboardContent() {
@@ -438,8 +439,8 @@ function DashboardContent() {
                         </Button>
                       </div>
                     </div>
-                    <div className="bg-slate-100 rounded-lg p-4 max-h-[300px] overflow-y-auto">
-                      <pre className="whitespace-pre-wrap text-sm font-mono">{result.content}</pre>
+                    <div className="bg-white border rounded-lg p-6 max-h-[400px] overflow-y-auto prose prose-sm max-w-none">
+                      <ReactMarkdown>{result.content}</ReactMarkdown>
                     </div>
                   </div>
                 )}
