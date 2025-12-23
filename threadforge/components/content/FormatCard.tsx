@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Download, Check, FileText, Linkedin, BookOpen, Instagram, Twitter } from "lucide-react";
+import { Copy, Download, Check, FileText, Linkedin, BookOpen, Instagram, Twitter, Heart, MessageCircle, Repeat2, Share, Bookmark, MoreHorizontal, ThumbsUp, Send } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import type { FormatOutput, ContentFormat } from "@/types";
 
@@ -9,24 +9,9 @@ interface FormatCardProps {
   format: FormatOutput;
 }
 
-const FORMAT_ICONS: Record<ContentFormat, React.ReactNode> = {
-  newsletter: <FileText className="w-5 h-5" />,
-  linkedin: <Linkedin className="w-5 h-5" />,
-  blog: <BookOpen className="w-5 h-5" />,
-  instagram: <Instagram className="w-5 h-5" />,
-  twitter_summary: <Twitter className="w-5 h-5" />,
-};
-
-const FORMAT_COLORS: Record<ContentFormat, string> = {
-  newsletter: "from-indigo-500 to-purple-500",
-  linkedin: "from-blue-500 to-blue-600",
-  blog: "from-green-500 to-emerald-500",
-  instagram: "from-pink-500 to-rose-500",
-  twitter_summary: "from-sky-400 to-blue-500",
-};
-
 export function FormatCard({ format }: FormatCardProps) {
   const [copied, setCopied] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(format.content);
@@ -46,72 +31,349 @@ export function FormatCard({ format }: FormatCardProps) {
     URL.revokeObjectURL(url);
   };
 
+  // Render format-specific preview
+  const renderPreview = () => {
+    switch (format.format) {
+      case "linkedin":
+        return <LinkedInPreview content={format.content} hashtags={format.metadata?.hashtags} />;
+      case "instagram":
+        return (
+          <InstagramPreview
+            slides={format.metadata?.slides || []}
+            hashtags={format.metadata?.hashtags}
+            currentSlide={currentSlide}
+            setCurrentSlide={setCurrentSlide}
+          />
+        );
+      case "twitter_summary":
+        return <TwitterPreview tweets={format.metadata?.tweets || []} />;
+      case "blog":
+        return <BlogPreview content={format.content} title={format.title} readingTime={format.metadata?.readingTime} />;
+      default:
+        return <NewsletterPreview content={format.content} />;
+    }
+  };
+
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      {/* Header */}
-      <div className={`bg-gradient-to-r ${FORMAT_COLORS[format.format]} px-4 py-3 flex items-center justify-between`}>
-        <div className="flex items-center gap-2 text-white">
-          {FORMAT_ICONS[format.format]}
-          <span className="font-medium">{format.title}</span>
-        </div>
-        <div className="flex items-center gap-3 text-white/80 text-sm">
-          {format.metadata?.readingTime && (
-            <span>{format.metadata.readingTime}</span>
-          )}
-          {format.metadata?.slideCount && (
-            <span>{format.metadata.slideCount} slides</span>
-          )}
-          {format.metadata?.tweetCount && (
-            <span>{format.metadata.tweetCount} tweets</span>
-          )}
-          <span>{format.wordCount} words</span>
-        </div>
-      </div>
-
-      {/* Metadata badges */}
-      {format.metadata?.hashtags && format.metadata.hashtags.length > 0 && (
-        <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 flex flex-wrap gap-1">
-          {format.metadata.hashtags.slice(0, 8).map((tag, i) => (
-            <span key={i} className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">
-              #{tag}
-            </span>
-          ))}
-          {format.metadata.hashtags.length > 8 && (
-            <span className="text-xs text-gray-400">+{format.metadata.hashtags.length - 8} more</span>
-          )}
-        </div>
-      )}
-
-      {/* Content */}
-      <div className="p-6 max-h-[500px] overflow-y-auto prose prose-sm max-w-none">
-        <ReactMarkdown>{format.content}</ReactMarkdown>
-      </div>
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+      {renderPreview()}
 
       {/* Actions */}
-      <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
-        <button
-          onClick={handleCopy}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-        >
-          {copied ? (
-            <>
-              <Check className="w-4 h-4 text-green-500" />
-              Copied!
-            </>
-          ) : (
-            <>
-              <Copy className="w-4 h-4" />
-              Copy
-            </>
+      <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+        <span className="text-xs text-gray-500">{format.wordCount} words</span>
+        <div className="flex gap-2">
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+          >
+            {copied ? (
+              <>
+                <Check className="w-4 h-4 text-green-500" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Copy className="w-4 h-4" />
+                Copy
+              </>
+            )}
+          </button>
+          <button
+            onClick={handleDownload}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition"
+          >
+            <Download className="w-4 h-4" />
+            Download
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Newsletter Preview - Clean article style
+function NewsletterPreview({ content }: { content: string }) {
+  return (
+    <div className="bg-white">
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-500 px-4 py-3">
+        <div className="flex items-center gap-2 text-white">
+          <FileText className="w-5 h-5" />
+          <span className="font-medium">Newsletter</span>
+        </div>
+      </div>
+      <div className="p-6 max-h-[500px] overflow-y-auto">
+        <article className="prose prose-sm max-w-none prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-p:text-gray-700 prose-p:leading-relaxed">
+          <ReactMarkdown>{content}</ReactMarkdown>
+        </article>
+      </div>
+    </div>
+  );
+}
+
+// LinkedIn Preview - Looks like a LinkedIn post
+function LinkedInPreview({ content, hashtags }: { content: string; hashtags?: string[] }) {
+  return (
+    <div className="bg-white">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3">
+        <div className="flex items-center gap-2 text-white">
+          <Linkedin className="w-5 h-5" />
+          <span className="font-medium">LinkedIn Post</span>
+        </div>
+      </div>
+      <div className="p-4 max-h-[500px] overflow-y-auto">
+        {/* LinkedIn post header */}
+        <div className="flex items-start gap-3 mb-3">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+            You
+          </div>
+          <div>
+            <p className="font-semibold text-gray-900">Your Name</p>
+            <p className="text-xs text-gray-500">Your headline • 1h • 🌐</p>
+          </div>
+        </div>
+
+        {/* Post content */}
+        <div className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed mb-3">
+          {content}
+        </div>
+
+        {/* Hashtags */}
+        {hashtags && hashtags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-3">
+            {hashtags.map((tag, i) => (
+              <span key={i} className="text-blue-600 text-sm">#{tag}</span>
+            ))}
+          </div>
+        )}
+
+        {/* Engagement bar */}
+        <div className="border-t border-gray-200 pt-2 mt-3">
+          <div className="flex justify-between text-gray-500">
+            <button className="flex items-center gap-1 hover:text-blue-600 p-2 rounded hover:bg-gray-100">
+              <ThumbsUp className="w-5 h-5" />
+              <span className="text-sm">Like</span>
+            </button>
+            <button className="flex items-center gap-1 hover:text-blue-600 p-2 rounded hover:bg-gray-100">
+              <MessageCircle className="w-5 h-5" />
+              <span className="text-sm">Comment</span>
+            </button>
+            <button className="flex items-center gap-1 hover:text-blue-600 p-2 rounded hover:bg-gray-100">
+              <Repeat2 className="w-5 h-5" />
+              <span className="text-sm">Repost</span>
+            </button>
+            <button className="flex items-center gap-1 hover:text-blue-600 p-2 rounded hover:bg-gray-100">
+              <Send className="w-5 h-5" />
+              <span className="text-sm">Send</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Instagram Preview - Carousel slides
+function InstagramPreview({
+  slides,
+  hashtags,
+  currentSlide,
+  setCurrentSlide
+}: {
+  slides: Array<{ slideNumber: number; text: string; visualDirection?: string }>;
+  hashtags?: string[];
+  currentSlide: number;
+  setCurrentSlide: (n: number) => void;
+}) {
+  if (!slides || slides.length === 0) {
+    return (
+      <div className="bg-white p-8 text-center text-gray-500">
+        No slides generated
+      </div>
+    );
+  }
+
+  const slide = slides[currentSlide] || slides[0];
+
+  return (
+    <div className="bg-white">
+      <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-orange-500 px-4 py-3">
+        <div className="flex items-center gap-2 text-white">
+          <Instagram className="w-5 h-5" />
+          <span className="font-medium">Instagram Carousel</span>
+          <span className="ml-auto text-sm opacity-80">{slides.length} slides</span>
+        </div>
+      </div>
+
+      {/* Instagram post frame */}
+      <div className="bg-black">
+        {/* Header */}
+        <div className="flex items-center gap-3 p-3 bg-white border-b">
+          <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-orange-500 rounded-full"></div>
+          <span className="font-semibold text-sm">yourhandle</span>
+          <MoreHorizontal className="w-5 h-5 ml-auto text-gray-600" />
+        </div>
+
+        {/* Slide content */}
+        <div className="aspect-square bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex items-center justify-center p-8 relative">
+          <div className="text-center text-white">
+            <p className="text-2xl md:text-3xl font-bold leading-tight drop-shadow-lg">
+              {slide.text}
+            </p>
+            {slide.visualDirection && (
+              <p className="text-xs mt-4 opacity-70 italic">
+                Visual tip: {slide.visualDirection}
+              </p>
+            )}
+          </div>
+
+          {/* Slide indicator dots */}
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-1">
+            {slides.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrentSlide(i)}
+                className={`w-2 h-2 rounded-full transition-all ${
+                  i === currentSlide ? 'bg-white w-4' : 'bg-white/50'
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Navigation arrows */}
+          {currentSlide > 0 && (
+            <button
+              onClick={() => setCurrentSlide(currentSlide - 1)}
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-lg"
+            >
+              ‹
+            </button>
           )}
-        </button>
-        <button
-          onClick={handleDownload}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition"
-        >
-          <Download className="w-4 h-4" />
-          Download
-        </button>
+          {currentSlide < slides.length - 1 && (
+            <button
+              onClick={() => setCurrentSlide(currentSlide + 1)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-lg"
+            >
+              ›
+            </button>
+          )}
+        </div>
+
+        {/* Engagement bar */}
+        <div className="bg-white p-3">
+          <div className="flex justify-between mb-2">
+            <div className="flex gap-4">
+              <Heart className="w-6 h-6 text-gray-800 hover:text-red-500 cursor-pointer" />
+              <MessageCircle className="w-6 h-6 text-gray-800 hover:text-gray-600 cursor-pointer" />
+              <Send className="w-6 h-6 text-gray-800 hover:text-gray-600 cursor-pointer" />
+            </div>
+            <Bookmark className="w-6 h-6 text-gray-800 hover:text-gray-600 cursor-pointer" />
+          </div>
+          <p className="text-sm font-semibold">1,234 likes</p>
+        </div>
+      </div>
+
+      {/* Hashtags preview */}
+      {hashtags && hashtags.length > 0 && (
+        <div className="p-3 bg-gray-50 border-t max-h-24 overflow-y-auto">
+          <p className="text-xs text-gray-500 mb-1">Suggested hashtags:</p>
+          <p className="text-xs text-blue-600">
+            {hashtags.map(tag => `#${tag}`).join(' ')}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Twitter Preview - Thread of tweets
+function TwitterPreview({ tweets }: { tweets: Array<{ number: number; content: string; charCount: number }> }) {
+  if (!tweets || tweets.length === 0) {
+    return (
+      <div className="bg-white p-8 text-center text-gray-500">
+        No tweets generated
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white">
+      <div className="bg-gradient-to-r from-sky-400 to-blue-500 px-4 py-3">
+        <div className="flex items-center gap-2 text-white">
+          <Twitter className="w-5 h-5" />
+          <span className="font-medium">Twitter Thread</span>
+          <span className="ml-auto text-sm opacity-80">{tweets.length} tweets</span>
+        </div>
+      </div>
+
+      <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
+        {tweets.map((tweet, index) => (
+          <div key={index} className="p-4 hover:bg-gray-50">
+            <div className="flex gap-3">
+              {/* Avatar */}
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 bg-gradient-to-br from-sky-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                  You
+                </div>
+                {/* Thread line */}
+                {index < tweets.length - 1 && (
+                  <div className="w-0.5 h-full bg-gray-200 mx-auto mt-1"></div>
+                )}
+              </div>
+
+              {/* Tweet content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1 mb-1">
+                  <span className="font-bold text-gray-900 text-sm">Your Name</span>
+                  <span className="text-gray-500 text-sm">@yourhandle</span>
+                  <span className="text-gray-400 text-sm">· 1m</span>
+                </div>
+                <p className="text-gray-900 text-sm whitespace-pre-wrap leading-relaxed">
+                  {tweet.content}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">{tweet.charCount}/280</p>
+
+                {/* Engagement */}
+                <div className="flex justify-between mt-3 max-w-md text-gray-500">
+                  <button className="flex items-center gap-1 hover:text-blue-500">
+                    <MessageCircle className="w-4 h-4" />
+                    <span className="text-xs">12</span>
+                  </button>
+                  <button className="flex items-center gap-1 hover:text-green-500">
+                    <Repeat2 className="w-4 h-4" />
+                    <span className="text-xs">48</span>
+                  </button>
+                  <button className="flex items-center gap-1 hover:text-red-500">
+                    <Heart className="w-4 h-4" />
+                    <span className="text-xs">156</span>
+                  </button>
+                  <button className="flex items-center gap-1 hover:text-blue-500">
+                    <Share className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Blog Preview - Article style
+function BlogPreview({ content, title, readingTime }: { content: string; title: string; readingTime?: string }) {
+  return (
+    <div className="bg-white">
+      <div className="bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-3">
+        <div className="flex items-center gap-2 text-white">
+          <BookOpen className="w-5 h-5" />
+          <span className="font-medium">Blog Post</span>
+          {readingTime && <span className="ml-auto text-sm opacity-80">{readingTime}</span>}
+        </div>
+      </div>
+      <div className="p-6 max-h-[500px] overflow-y-auto">
+        <article className="prose prose-sm max-w-none prose-headings:font-bold prose-h1:text-2xl prose-h1:mb-4 prose-h2:text-xl prose-h2:mt-6 prose-h2:mb-3 prose-p:text-gray-700 prose-p:leading-relaxed prose-ul:my-4 prose-li:my-1 prose-strong:text-gray-900">
+          <ReactMarkdown>{content}</ReactMarkdown>
+        </article>
       </div>
     </div>
   );
