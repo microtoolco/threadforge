@@ -50,7 +50,7 @@ export function FormatCard({ format }: FormatCardProps) {
       case "blog":
         return <BlogPreview content={format.content} title={format.title} readingTime={format.metadata?.readingTime} />;
       default:
-        return <NewsletterPreview content={format.content} />;
+        return <NewsletterPreview content={format.content} title={format.title} readingTime={format.metadata?.readingTime} />;
     }
   };
 
@@ -91,20 +91,104 @@ export function FormatCard({ format }: FormatCardProps) {
   );
 }
 
-// Newsletter Preview - Clean article style
-function NewsletterPreview({ content }: { content: string }) {
+// Newsletter Preview - Professional styled newsletter
+function NewsletterPreview({ content, title, readingTime }: { content: string; title: string; readingTime?: string }) {
+  // Extract first paragraph as intro if content is long enough
+  const paragraphs = content.split('\n\n').filter(p => p.trim());
+
   return (
-    <div className="bg-white">
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-500 px-4 py-3">
-        <div className="flex items-center gap-2 text-white">
-          <FileText className="w-5 h-5" />
-          <span className="font-medium">Newsletter</span>
+    <div className="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900">
+      {/* Header */}
+      <div className="text-center pt-6 pb-4 px-4">
+        <span className="inline-block bg-gradient-to-r from-cyan-400 to-purple-500 text-white text-xs font-semibold px-4 py-1.5 rounded-full mb-3">
+          From X Thread to Newsletter
+        </span>
+        <h2 className="text-white text-xl font-bold mb-1">ThreadForge</h2>
+        <p className="text-white/70 text-sm">AI-powered content transformation</p>
+      </div>
+
+      {/* Newsletter Card */}
+      <div className="mx-4 mb-4">
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[500px] overflow-y-auto">
+          <div className="p-6 md:p-8">
+            {/* Title */}
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight mb-4">
+              {title || "Your Newsletter Title"}
+            </h1>
+
+            {/* Meta */}
+            <div className="flex items-center gap-3 pb-5 mb-5 border-b border-gray-100">
+              <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                You
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900 text-sm">@yourhandle</p>
+                <p className="text-gray-500 text-xs">
+                  {readingTime || "5 min read"} · Originally posted on X
+                </p>
+              </div>
+            </div>
+
+            {/* Content with custom styling */}
+            <article className="newsletter-content">
+              <ReactMarkdown
+                components={{
+                  h1: ({ children }) => (
+                    <h1 className="text-2xl font-bold text-gray-900 mt-6 mb-3">{children}</h1>
+                  ),
+                  h2: ({ children }) => (
+                    <h2 className="text-xl font-bold text-gray-900 mt-8 mb-3">{children}</h2>
+                  ),
+                  h3: ({ children }) => (
+                    <h3 className="text-lg font-bold text-gray-900 mt-6 mb-2">{children}</h3>
+                  ),
+                  p: ({ children }) => (
+                    <p className="text-gray-600 leading-relaxed mb-4">{children}</p>
+                  ),
+                  ul: ({ children }) => (
+                    <ul className="my-4 space-y-2">{children}</ul>
+                  ),
+                  ol: ({ children }) => (
+                    <ol className="my-4 space-y-3 list-decimal list-inside">{children}</ol>
+                  ),
+                  li: ({ children }) => (
+                    <li className="text-gray-600 leading-relaxed">{children}</li>
+                  ),
+                  blockquote: ({ children }) => (
+                    <div className="my-6 bg-gradient-to-r from-amber-50 to-yellow-50 border-l-4 border-amber-400 rounded-r-xl p-4">
+                      <div className="text-amber-900 font-medium">{children}</div>
+                    </div>
+                  ),
+                  strong: ({ children }) => (
+                    <strong className="font-semibold text-gray-900">{children}</strong>
+                  ),
+                  em: ({ children }) => (
+                    <em className="italic text-purple-700">{children}</em>
+                  ),
+                  hr: () => (
+                    <hr className="my-6 border-gray-200" />
+                  ),
+                }}
+              >
+                {content}
+              </ReactMarkdown>
+            </article>
+
+            {/* Footer */}
+            <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+              <p className="text-gray-500 text-sm">
+                This newsletter was converted from an X thread using <strong className="text-gray-700">ThreadForge</strong>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
-      <div className="p-6 max-h-[500px] overflow-y-auto">
-        <article className="prose prose-sm max-w-none prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-p:text-gray-700 prose-p:leading-relaxed">
-          <ReactMarkdown>{content}</ReactMarkdown>
-        </article>
+
+      {/* Bottom badge */}
+      <div className="text-center pb-4">
+        <span className="inline-block bg-white/10 text-white/80 text-xs px-4 py-2 rounded-full">
+          ⚡ Powered by ThreadForge
+        </span>
       </div>
     </div>
   );
@@ -359,21 +443,95 @@ function TwitterPreview({ tweets }: { tweets: Array<{ number: number; content: s
   );
 }
 
-// Blog Preview - Article style
+// Blog Preview - Professional blog article style
 function BlogPreview({ content, title, readingTime }: { content: string; title: string; readingTime?: string }) {
   return (
-    <div className="bg-white">
-      <div className="bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-3">
-        <div className="flex items-center gap-2 text-white">
-          <BookOpen className="w-5 h-5" />
-          <span className="font-medium">Blog Post</span>
-          {readingTime && <span className="ml-auto text-sm opacity-80">{readingTime}</span>}
+    <div className="bg-gradient-to-br from-emerald-900 via-green-900 to-teal-900">
+      {/* Header */}
+      <div className="text-center pt-6 pb-4 px-4">
+        <span className="inline-block bg-gradient-to-r from-emerald-400 to-teal-400 text-white text-xs font-semibold px-4 py-1.5 rounded-full mb-3">
+          SEO-Optimized Blog Post
+        </span>
+        <h2 className="text-white text-xl font-bold mb-1">ThreadForge</h2>
+        <p className="text-white/70 text-sm">Thread to blog in seconds</p>
+      </div>
+
+      {/* Blog Card */}
+      <div className="mx-4 mb-4">
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[500px] overflow-y-auto">
+          <div className="p-6 md:p-8">
+            {/* Title */}
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight mb-3">
+              {title || "Your Blog Post Title"}
+            </h1>
+
+            {/* Meta */}
+            <div className="flex items-center gap-4 pb-5 mb-5 border-b border-gray-100 text-sm text-gray-500">
+              <span className="flex items-center gap-1">
+                <BookOpen className="w-4 h-4" />
+                {readingTime || "5 min read"}
+              </span>
+              <span>•</span>
+              <span>Converted from X Thread</span>
+            </div>
+
+            {/* Content */}
+            <article>
+              <ReactMarkdown
+                components={{
+                  h1: ({ children }) => (
+                    <h1 className="text-2xl font-bold text-gray-900 mt-6 mb-3">{children}</h1>
+                  ),
+                  h2: ({ children }) => (
+                    <h2 className="text-xl font-bold text-gray-900 mt-8 mb-3 pb-2 border-b border-gray-100">{children}</h2>
+                  ),
+                  h3: ({ children }) => (
+                    <h3 className="text-lg font-semibold text-gray-900 mt-6 mb-2">{children}</h3>
+                  ),
+                  p: ({ children }) => (
+                    <p className="text-gray-600 leading-relaxed mb-4">{children}</p>
+                  ),
+                  ul: ({ children }) => (
+                    <ul className="my-4 space-y-2 list-disc list-inside">{children}</ul>
+                  ),
+                  ol: ({ children }) => (
+                    <ol className="my-4 space-y-3 list-decimal list-inside">{children}</ol>
+                  ),
+                  li: ({ children }) => (
+                    <li className="text-gray-600 leading-relaxed">{children}</li>
+                  ),
+                  blockquote: ({ children }) => (
+                    <div className="my-6 bg-gradient-to-r from-emerald-50 to-teal-50 border-l-4 border-emerald-500 rounded-r-xl p-4">
+                      <div className="text-emerald-900 italic">{children}</div>
+                    </div>
+                  ),
+                  strong: ({ children }) => (
+                    <strong className="font-semibold text-gray-900">{children}</strong>
+                  ),
+                  hr: () => (
+                    <hr className="my-6 border-gray-200" />
+                  ),
+                }}
+              >
+                {content}
+              </ReactMarkdown>
+            </article>
+
+            {/* Footer */}
+            <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+              <p className="text-gray-500 text-sm">
+                Ready to publish • Generated by <strong className="text-gray-700">ThreadForge</strong>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
-      <div className="p-6 max-h-[500px] overflow-y-auto">
-        <article className="prose prose-sm max-w-none prose-headings:font-bold prose-h1:text-2xl prose-h1:mb-4 prose-h2:text-xl prose-h2:mt-6 prose-h2:mb-3 prose-p:text-gray-700 prose-p:leading-relaxed prose-ul:my-4 prose-li:my-1 prose-strong:text-gray-900">
-          <ReactMarkdown>{content}</ReactMarkdown>
-        </article>
+
+      {/* Bottom badge */}
+      <div className="text-center pb-4">
+        <span className="inline-block bg-white/10 text-white/80 text-xs px-4 py-2 rounded-full">
+          ⚡ SEO-ready for your blog
+        </span>
       </div>
     </div>
   );
